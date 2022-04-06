@@ -21,7 +21,7 @@ from sc2.unit import Unit
 class ExpandEverywhere(BotAI):
 
     async def on_start(self):
-        self.client.game_step = 50
+        # self.client.game_step = 50
         await self.client.debug_show_map()
 
     async def on_step(self, iteration):
@@ -78,7 +78,7 @@ def main():
         maps.get("AcropolisLE"),
         [Bot(Race.Zerg, ExpandEverywhere()),
          Computer(Race.Terran, Difficulty.Medium)],
-        realtime=False,
+        realtime=True,
         save_replay_as="ZvT.SC2Replay",
     )
 

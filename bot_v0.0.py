@@ -28,7 +28,6 @@ class WorkerRushBot(BotAI):
     async def on_start(self):
         self.client.game_step = 2
 
-
     async def on_step(self, iteration: int):
         global MEMORY, BOOL_INIT_FORMATION, BOOL_COMPUTE_ALL_4_POINTS, BOOL_MAIN_SPLIT, DEST_POSITIONS, RANDOM_RESULTS
         global LOOPING_ID

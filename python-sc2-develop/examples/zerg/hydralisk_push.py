@@ -59,7 +59,7 @@ class Hydralisk(BotAI):
         # If all our townhalls are dead, send all our units to attack
         if not self.townhalls:
             for unit in self.units.of_type(
-                {UnitTypeId.DRONE, UnitTypeId.QUEEN, UnitTypeId.ZERGLING, UnitTypeId.HYDRALISK}
+                    {UnitTypeId.DRONE, UnitTypeId.QUEEN, UnitTypeId.ZERGLING, UnitTypeId.HYDRALISK}
             ):
                 unit.attack(self.enemy_start_locations[0])
             return
@@ -93,8 +93,8 @@ class Hydralisk(BotAI):
 
         # If we dont have both extractors: build them
         if (
-            self.structures(UnitTypeId.SPAWNINGPOOL)
-            and self.gas_buildings.amount + self.already_pending(UnitTypeId.EXTRACTOR) < 2
+                self.structures(UnitTypeId.SPAWNINGPOOL)
+                and self.gas_buildings.amount + self.already_pending(UnitTypeId.EXTRACTOR) < 2
         ):
             if self.can_afford(UnitTypeId.EXTRACTOR):
                 # May crash if we dont have any drones
