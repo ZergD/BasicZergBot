@@ -2,11 +2,15 @@ from sc2 import maps
 from sc2.bot_ai import BotAI
 from sc2.data import Difficulty, Race
 from sc2.ids.unit_typeid import UnitTypeId
+from sc2.ids.upgrade_id import UpgradeId
 from sc2.main import run_game
 from sc2.player import Bot, Computer
 from sc2.units import Units
 from sc2.unit import Unit
 from pprint import pprint
+from sc2.position import Point2
+
+import random
 
 
 class BasicZerg(BotAI):
@@ -21,10 +25,11 @@ class BasicZerg(BotAI):
 
     def __init__(self):
         super(BasicZerg, self).__init__()
-        self.first_expantion = False
+        # self.first_expantion = False
         self.distance_to_closes_hatch = 99999
         self.position_of_first_expand = None
         self.expand_positions = []
+        self.zergling_speed = False
 
     def display_debug_structure_data(self):
         for structure in self.structures:
@@ -41,10 +46,14 @@ class BasicZerg(BotAI):
                 size=12,
             )
 
+    def select_target(self) -> Point2:
+        if self.enemy_structures:
+            return random.choice(self.enemy_structures).position
+        return self.enemy_start_locations[0]
+
     async def on_step(self, iteration: int):
         # Debug part //
         print(f"step {iteration} : time: {self.time_formatted}")
-        print(self.expand_positions)
         if iteration == 10:
             self.expand_positions.pop(0)
             print("############### ARRAY POPPED WTF ############################")
@@ -102,7 +111,7 @@ class BasicZerg(BotAI):
                 larva: Unit = larvae.random
                 larva.train(UnitTypeId.DRONE)
 
-        # build first expantion
+        # build first and second expantion
         if self.structures(UnitTypeId.HATCHERY).amount + self.already_pending(UnitTypeId.HATCHERY) < 3:
             if self.can_afford(UnitTypeId.HATCHERY):
                 for drone in self.workers.collecting:
@@ -112,9 +121,47 @@ class BasicZerg(BotAI):
 
         # Build spawing bool only after self.first_expantion == True
         if self.structures(UnitTypeId.SPAWNINGPOOL).amount + self.already_pending(UnitTypeId.SPAWNINGPOOL) == 0 and \
-                self.first_expantion:
+                self.structures(UnitTypeId.HATCHERY).amount == 2:
             if self.can_afford(UnitTypeId.SPAWNINGPOOL):
                 await self.build(UnitTypeId.SPAWNINGPOOL, near=hq.position.towards(self.game_info.map_center, 5))
+
+        if (
+                self.structures(UnitTypeId.SPAWNINGPOOL)
+                and self.gas_buildings.amount + self.already_pending(UnitTypeId.EXTRACTOR) < 2
+        ):
+            if self.can_afford(UnitTypeId.EXTRACTOR):
+                # Can crash if we dont have any drones
+                for vg in self.vespene_geyser.closer_than(10, hq):
+                    drone: Unit = self.workers.random
+                    drone.build_gas(vg)
+                    break
+
+        # saturate gas
+        for g in self.gas_buildings:
+            if g.assigned_harvesters < g.ideal_harvesters:
+                w: Units = self.workers.closer_than(10, g)
+                if w:
+                    w.random.gather(g)
+
+        # prod zerglings.
+        if self.structures(UnitTypeId.SPAWNINGPOOL).ready:
+            if larvae and self.can_afford(UnitTypeId.ZERGLING):
+                larvae.random.train(UnitTypeId.ZERGLING)
+
+        # research zergling speed
+        if self.already_pending_upgrade(UpgradeId.ZERGLINGMOVEMENTSPEED) == 0 \
+                and self.can_afford(UpgradeId.ZERGLINGMOVEMENTSPEED):
+            spawning_pool_ready: Units = self.structures(UnitTypeId.SPAWNINGPOOL).ready
+            if spawning_pool_ready:
+                self.research(UpgradeId.ZERGLINGMOVEMENTSPEED)
+
+        # step 840 : time: 05:00
+        # step 600 : time: 03:34, we can do it way earlier. This is ~grosso modo when speed finished.
+        # but do we have enough lings ?
+        if iteration == 840:
+            # Attack enemy
+            for unit in self.units.of_type({UnitTypeId.ZERGLING}):
+                unit.attack(self.select_target())
 
         print("----------------------------------------------------------------------------------")
 
@@ -123,7 +170,7 @@ def main():
     run_game(
         maps.get("Abyssal Reef LE"),
         [Bot(Race.Zerg, BasicZerg()),
-         Computer(Race.Terran, Difficulty.Easy)],
+         Computer(Race.Terran, Difficulty.Medium)],
         realtime=True,
     )
 
